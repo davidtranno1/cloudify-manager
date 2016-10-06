@@ -16,6 +16,7 @@
 from datetime import datetime
 from collections import namedtuple
 
+from flask import current_app
 from flask_security.utils import md5
 
 from .ldap import get_ldappy
@@ -43,16 +44,19 @@ class Authentication(object):
         if not user and not auth:
             unauthorized_user_handler('No authentication info provided')
 
+        logger = current_app.logger
+        logger.debug('Running user authentication for user {0}'.format(user))
+
         if not auth:
             # Creating this dummy auth object to have a simpler syntax
             # inside the auth methods
             auth = Authorization(user.username, user.password)
 
-        # LDAP authentication
         if self._ldappy:
+            logger.debug('Running authentication with LDAP')
             user = self._ldap_authenticate_and_update_user(user, auth)
         else:
-            # Basic HTTP authentication
+            logger.debug('Running Basic HTTP authentication')
             user = self._basic_http_authenticate(user, hashed_pass)
 
         user.last_login_at = datetime.now()
@@ -126,7 +130,8 @@ class Authentication(object):
         :param hashed_pass: md5 hashed password, or None
         """
         if not user or md5(user.password) != hashed_pass:
-            unauthorized_user_handler('HTTP authentication failed')
+            unauthorized_user_handler('HTTP authentication failed '
+                                      'for user: {0}'.format(user))
 
         # Reloading the user from the datastore, because the current user
         # object is detached from a session
