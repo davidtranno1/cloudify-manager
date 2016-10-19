@@ -86,14 +86,16 @@ class User(SerializableBase, UserMixin):
         user_dict['role'] = self.roles[0].name
         return user_dict
 
+    @property
+    def role(self):
+        return self.roles[0].name
+
 
 class Role(SerializableBase, RoleMixin):
     __tablename__ = 'roles'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.Text, unique=True, nullable=False, index=True)
-    allowed = db.Column(db.PickleType, nullable=False)
-    denied = db.Column(db.PickleType)
     description = db.Column(db.Text)
 
 

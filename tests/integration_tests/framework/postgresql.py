@@ -25,8 +25,8 @@ from manager_rest.storage import db
 from manager_rest.config import instance
 from manager_rest.storage.models import Tenant
 from manager_rest.security import user_datastore
-from manager_rest.utils import add_users_and_roles_to_userstore
-from manager_rest.test.security_utils import get_admin_role
+from manager_rest.test.security_utils import get_admin_user
+from manager_rest.utils import create_security_roles_and_admin_user
 
 from integration_tests.framework import utils
 
@@ -91,11 +91,12 @@ def reset_data():
     default_tenant = Tenant(name=instance.default_tenant_name)
     db.session.add(default_tenant)
 
-    add_users_and_roles_to_userstore(
+    admin_user = get_admin_user()
+    create_security_roles_and_admin_user(
         user_datastore,
-        utils.get_admin_user(),
-        get_admin_role(),
-        default_tenant
+        admin_username=admin_user['username'],
+        admin_password=admin_user['password'],
+        default_tenant=default_tenant
     )
 
     # Clear the connection

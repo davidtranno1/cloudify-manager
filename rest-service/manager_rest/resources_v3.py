@@ -15,11 +15,9 @@
 #
 
 from flask import request
-from flask_security import current_user
 
 from manager_rest.storage import models
 from manager_rest.security import SecuredResource
-from manager_rest.security.security_models import User as UserModel
 from manager_rest.resources import (marshal_with,
                                     exceptions_handled)
 from manager_rest.resources_v2 import (create_filters,
@@ -27,6 +25,9 @@ from manager_rest.resources_v2 import (create_filters,
                                        sortable,
                                        verify_json_content_type,
                                        verify_parameter_in_request_body)
+from manager_rest.manager_exceptions import BadParametersError
+from manager_rest.security.security_models import User as UserModel
+
 try:
     from cloudify_premium import (TenantResponse,
                                   GroupResponse,
@@ -48,11 +49,7 @@ class Tenants(SecuredMultiTenancyResource):
         """
         List tenants
         """
-        return multi_tenancy.list_tenants(current_user.id,
-                                          _include,
-                                          filters,
-                                          pagination,
-                                          sort)
+        return multi_tenancy.list_tenants(_include, filters, pagination, sort)
 
 
 class TenantsId(SecuredMultiTenancyResource):
@@ -169,11 +166,9 @@ class Users(SecuredMultiTenancyResource):
                                         pagination,
                                         sort)
 
-
-class UsersId(SecuredMultiTenancyResource):
     @exceptions_handled
     @marshal_with(UserResponse)
-    def post(self, multi_tenancy=None):
+    def put(self, multi_tenancy=None):
         """
         Create a user
         """
@@ -186,6 +181,27 @@ class UsersId(SecuredMultiTenancyResource):
         role_name = request_json.get('role')
 
         return multi_tenancy.create_user(username, password, role_name)
+
+
+class UsersId(SecuredMultiTenancyResource):
+    @exceptions_handled
+    @marshal_with(UserResponse)
+    def post(self, username, multi_tenancy=None):
+        """
+        Set password/role for a certain user
+        """
+        verify_json_content_type()
+        request_json = request.json
+        password = request_json.get('password')
+        role_name = request_json.get('role')
+        if password:
+            if role_name:
+                raise BadParametersError('Both `password` and `role` provided')
+            return multi_tenancy.set_user_password(username, password)
+        elif role_name:
+            return multi_tenancy.set_user_role(username, role_name)
+        else:
+            raise BadParametersError('Neither `password` nor `role` provided')
 
 
 class UsersGroups(SecuredMultiTenancyResource):

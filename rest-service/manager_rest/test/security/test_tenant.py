@@ -44,5 +44,7 @@ class AuthenticationTests(BaseServerTestCase):
         self.assertEqual(plugin.package_source, 'psutil==3.3.0')
         self.assertEqual(plugin.tenant.name, 'default_tenant')
 
+    def test_provider_context_has_no_tenant(self):
+        # Provider context shouldn't have a tenant
         provider_context = self.sm.get_provider_context()
         self.assertFalse(hasattr(provider_context, 'tenant'))

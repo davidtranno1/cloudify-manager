@@ -260,13 +260,3 @@ class YamlPatcher(object):
     @staticmethod
     def _raise_illegal(prop_path):
         raise RuntimeError('illegal path: {0}'.format(prop_path))
-
-
-def get_admin_user():
-    return [
-        {
-            'username': cli_env.get_username(),
-            'password': cli_env.get_password(),
-            'roles': ['administrator']
-        }
-    ]
