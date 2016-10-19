@@ -18,6 +18,7 @@ import yaml
 import tarfile
 import logging
 import os
+import sys
 import shutil
 import time
 import uuid
@@ -30,6 +31,8 @@ import nose.tools
 import cloudify.utils
 import cloudify.logs
 import cloudify.event
+
+from logging.handlers import RotatingFileHandler
 
 from manager_rest.utils import mkdirs
 
@@ -54,8 +57,37 @@ class BaseTestCase(unittest.TestCase):
             prefix='{0}-'.format(self._testMethodName))
         self.cfy = test_utils.get_cfy()
         self.addCleanup(shutil.rmtree, self.workdir, ignore_errors=True)
+
+        handlers = [logging.StreamHandler(sys.stdout)]
+        handlers[0].setLevel(logging.INFO)
+        logs_path = '/var/log/cloudify'
+        try:
+            if os.path.isdir(logs_path):
+                logs_path = os.path.join(
+                    logs_path, 'integration_tests_framework.log')
+                handler = RotatingFileHandler(
+                    logs_path, maxBytes=5242880, backupCount=5)
+                handler.setLevel(logging.DEBUG)
+                handlers.append(handler)
+        except IOError:
+            pass
         self.logger = cloudify.utils.setup_logger(self._testMethodName,
-                                                  logging.INFO)
+                                                  logging.NOTSET,
+                                                  handlers=handlers)
+        self.logger.info('')
+        self.logger.info('--------------------------------------------------'
+                         '--------------------------------------------------'
+                         '--------------------------------------------------')
+        self.logger.info('Starting test:  {0}'.format(self.id()))
+        if len(handlers) > 1:
+            self.logger.info(
+                'Framework logs are saved in {0}'.format(logs_path))
+        else:
+            self.logger.info('Framework logs are not saved into a file. '
+                             'To allow logs saving, make sure the directory '
+                             '/var/log/cloudify '
+                             'exists with Permissions to edit.')
+
         self.client = None
 
     def _setup_running_manager_attributes(self):
@@ -72,11 +104,10 @@ class BaseTestCase(unittest.TestCase):
             self.logger.info('Saving manager logs is disabled by configuration'
                              ' for test:  {0}'.format(test_path[-1]))
             self.logger.info('To enable logs keeping, define "CFY_LOGS_PATH"')
-
             return
+
         self.logger.info(
             'Saving manager logs for test:  {0}'.format(test_path[-1]))
-
         logs_dir = os.path.join(os.path.expanduser(logs_dir), *test_path)
         mkdirs(logs_dir)
         target = os.path.join(logs_dir, 'logs.tar.gz')
